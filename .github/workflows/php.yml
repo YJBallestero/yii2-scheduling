@@ -13,10 +13,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      
+
     - uses: shivammathur/setup-php@v2
       with:
-        php-version: '5.4'
+        php-version: '8.1'
         extensions: mbstring
 
     - name: Validate composer.json and composer.lock

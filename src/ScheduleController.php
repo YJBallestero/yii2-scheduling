@@ -1,6 +1,7 @@
 <?php
 
 namespace omnilight\scheduling;
+use Yii;
 use yii\console\Controller;
 use yii\di\Instance;
 
@@ -24,35 +25,40 @@ class ScheduleController extends Controller
      */
     public $omitErrors = false;
 
-    public function options($actionID)
-    {
+    public function options($actionID): array {
         return array_merge(parent::options($actionID),
-            $actionID == 'run' ? ['scheduleFile', 'omitErrors'] : []
+            $actionID === 'run' ? ['scheduleFile', 'omitErrors'] : []
         );
     }
 
 
-    public function init()
-    {
-        if (\Yii::$app->has($this->schedule)) {
-            $this->schedule = Instance::ensure($this->schedule, Schedule::className());
+    /**
+     * @return void
+     * @throws \yii\base\InvalidConfigException
+     */
+    public function init(): void {
+        if (Yii::$app->has($this->schedule)) {
+            $this->schedule = Instance::ensure($this->schedule, Schedule::class);
         } else {
-            $this->schedule = \Yii::createObject(Schedule::className());
+            $this->schedule = Yii::createObject(Schedule::class);
         }
         parent::init();
     }
 
 
-    public function actionRun()
-    {
+    /**
+     * @return void
+     * @throws \yii\base\InvalidConfigException
+     */
+    public function actionRun(): void {
         $this->importScheduleFile();
 
-        $events = $this->schedule->dueEvents(\Yii::$app);
+        $events = $this->schedule->dueEvents(Yii::$app);
 
         foreach ($events as $event) {
             $event->omitErrors($this->omitErrors);
             $this->stdout('Running scheduled command: '.$event->getSummaryForDisplay()."\n");
-            $event->run(\Yii::$app);
+            $event->run(Yii::$app);
         }
 
         if (count($events) === 0)
@@ -61,20 +67,19 @@ class ScheduleController extends Controller
         }
     }
 
-    protected function importScheduleFile()
-    {
+    protected function importScheduleFile(): void {
         if ($this->scheduleFile === null) {
             return;
         }
 
-        $scheduleFile = \Yii::getAlias($this->scheduleFile);
-        if (file_exists($scheduleFile) == false) {
+        $scheduleFile = Yii::getAlias($this->scheduleFile);
+        if (file_exists($scheduleFile) === false) {
             $this->stderr('Can not load schedule file '.$this->scheduleFile."\n");
             return;
         }
 
         $schedule = $this->schedule;
-        call_user_func(function() use ($schedule, $scheduleFile) {
+        call_user_func(static function() use ($schedule, $scheduleFile) {
             include $scheduleFile;
         });
     }

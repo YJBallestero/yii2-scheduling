@@ -1,13 +1,16 @@
 <?php
 
 namespace omnilight\scheduling;
+
 use Yii;
 use yii\base\Application;
-use yii\base\InvalidParamException;
+use InvalidArgumentException;
 use yii\mutex\Mutex;
 
 /**
  * Class CallbackEvent
+ *
+ * @property-read string $summaryForDisplay
  */
 class CallbackEvent extends Event
 {
@@ -16,25 +19,23 @@ class CallbackEvent extends Event
      *
      * @var string
      */
-    protected $callback;
+    protected string $callback;
     /**
      * The parameters to pass to the method.
      *
      * @var array
      */
-    protected $parameters;
+    protected array $parameters;
 
     /**
      * Create a new event instance.
      *
-     * @param Mutex $mutex
-     * @param string $callback
-     * @param array $parameters
-     * @param array $config
-     * @throws InvalidParamException
+     * @param \yii\mutex\Mutex $mutex
+     * @param string           $callback
+     * @param array            $parameters
+     * @param array            $config
      */
-    public function __construct(Mutex $mutex, $callback, array $parameters = [], $config = [])
-    {
+    public function __construct(Mutex $mutex, string $callback, array $parameters = [], array $config = []) {
         $this->callback = $callback;
         $this->parameters = $parameters;
         $this->_mutex = $mutex;
@@ -43,11 +44,8 @@ class CallbackEvent extends Event
             Yii::configure($this, $config);
         }
 
-        if ( ! is_string($this->callback) && ! is_callable($this->callback))
-        {
-            throw new InvalidParamException(
-                "Invalid scheduled callback event. Must be string or callable."
-            );
+        if (!is_string($this->callback) && !is_callable($this->callback)) {
+            throw new InvalidArgumentException("Invalid scheduled callback event. Must be string or callable.");
         }
     }
 
@@ -55,14 +53,15 @@ class CallbackEvent extends Event
      * Run the given event.
      *
      * @param Application $app
+     *
      * @return mixed
      */
-    public function run(Application $app)
-    {
+    public function run(Application $app): mixed {
         $this->trigger(self::EVENT_BEFORE_RUN);
         $response = call_user_func_array($this->callback, array_merge($this->parameters, [$app]));
-        parent::callAfterCallbacks($app);
+        $this->callAfterCallbacks($app);
         $this->trigger(self::EVENT_AFTER_RUN);
+
         return $response;
     }
 
@@ -70,12 +69,10 @@ class CallbackEvent extends Event
      * Do not allow the event to overlap each other.
      *
      * @return $this
-     * @throws InvalidParamException
      */
-    public function withoutOverlapping()
-    {
+    public function withoutOverlapping(): self {
         if (empty($this->_description)) {
-            throw new InvalidParamException(
+            throw new InvalidArgumentException(
                 "A scheduled event name is required to prevent overlapping. Use the 'description' method before 'withoutOverlapping'."
             );
         }
@@ -88,8 +85,7 @@ class CallbackEvent extends Event
      *
      * @return string
      */
-    protected function mutexName()
-    {
+    protected function mutexName(): string {
         return 'framework/schedule-' . sha1($this->_description);
     }
 
@@ -98,9 +94,11 @@ class CallbackEvent extends Event
      *
      * @return string
      */
-    public function getSummaryForDisplay()
-    {
-        if (is_string($this->_description)) return $this->_description;
+    public function getSummaryForDisplay(): string {
+        if (is_string($this->_description)) {
+            return $this->_description;
+        }
+
         return is_string($this->callback) ? $this->callback : 'Closure';
     }
 
